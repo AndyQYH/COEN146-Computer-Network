@@ -1,0 +1,152 @@
+# Name: <Yihui Qin> 
+# Date: <01/13/2022> 
+# Title: Lab 2 – Observation
+# Description: This program documents outputs, observations, and notes after running linux network commands, 
+               and c programs that calculates packet loss and RTT
+
+# Observations for Lab2
+
+#step 1 --- running Linux Network Commands
+1) netstat -a
+   --- display all the active internet connection(servers and established), and socket interfaces
+   --- Variables for internet connections: Protocol, Recv-Q (amount of data queued in the socket),Send-Q (amount of data sent through socket),
+       Local Address, Foreign Address, and State
+   --- Variables for socket: Protocol, Refcnt(reference count), Flags, Type, State, I-Node(node ID), Path
+   --- TCP is used in every socket and server at SCU
+   --- use this to check which internet server is connected
+2) netstat -r
+   --- display the routing table of the internet structure 
+   ---  Destination     Gateway         Genmask         Flags   MSS Window  irtt Iface
+	default         vlan1608-router 0.0.0.0         UG        0 0          0 eth0
+	10.16.8.0       0.0.0.0         255.255.252.0   U         0 0          0 eth0
+	172.16.127.0    0.0.0.0         255.255.255.0   U         0 0          0 vmnet1
+	192.168.122.0   0.0.0.0         255.255.255.0   U         0 0          0 virbr0
+   --- use this to check individual connection history
+3) ifconfig
+   --- display all the active internet interfaces
+   --- the current in-operation-interfaces for me is br5, br6, br23, eth0, lo, virbr0, virbr0-nir, vlan5, vlan6, vlan23, vmnet1
+   --- information on the interfaces are 1)ethernet or internet 2)Mximum Transmission Unit(MTU), packet logs and error logs
+   --- can be used to determine cogestion, or doing flow-control
+4) hostname
+   --- returns the name of the host server (I got hostname as linux10622)
+   --- can be used to set hostnames 
+5) hostname -i
+   --- returns the IP address of the host server (I got IP address as 10.16.8.36)
+6) ping 
+   --- This command takes as input the IP address or the URL and sends a data packet to the specified address with
+       the message “PING” and get a response from the server/host this time is recorded which is called latency
+   --- used to check connection between server host and client
+7) traceroute
+   --- prints the route that a packet takes to reach the host.
+   --- used when we want to know the detailed path(every hop, routers, switches) packets have taken
+   --- using IPV6 for google.com is not available
+8) telnet
+   --- attempts to establish connection to a remote host server from local
+   --- uses of the telnet command is to check if a particular port is listening on a server
+9) dig 
+   --- used to gather DNS information
+   --- returns the response time, time stamp, signal size, server IP from the destination server.
+10)route
+   --- provides details in IP Routing 
+   --- same output as netstat -r
+   --- Just checked Linux system routing, only IPV4 available
+11)arp
+   --- resolve the IP address of a system to its mac address
+   --- displays ARP cache in the system
+
+#step 2 --- select three host and uses PING with packet size option
+                  ------------------------------------------------
+                  |          Packet Loss / Roud-Trip Time        |    -----> command: ping -s size -c count = 1 website
+                  ------------------------------------------------
+   ---            |  Asia Host   |  European Host |  US Host     |    -----> issues: did not specify interval, number of pings
+                  |  Baidu.com   |  Nokia.com     |  Google.com  |
+                  |220.181.38.148|  162.13.40.196 |142.250.191.78|
+   ---------------------------------------------------------------
+   packet |32     |              |                |              |      
+   size   |Bytes  |  0% / 212ms  |   0% / 138ms   |  0% / 4.21ms |
+          --------------------------------------------------------
+   packet |96     |              |                |              |
+   size   |Bytes  |  0% / 176ms  |   0% / 138ms   | 0% / truncate|
+          --------------------------------------------------------
+   packet |288    |              |                |              |
+   size   |Bytes  |  0% / 193ms  |   0% / 139ms   | 0% / truncate|
+          --------------------------------------------------------
+   packet |864    |              |                |              |
+   size   |Bytes  |  100% / ?    |   0% / 139ms   | 0% / truncate|
+   ---------------------------------------------------------------
+
+   --- Observation
+       --- RTT increases as distance between my location to the location of the host server increases
+           my location to Google(Mountain View, CA) ---> 10.0 miles
+           my location to Nokia(Finland)            ---> 5372.5 miles
+           my location to Baidu(Beijing, China)     ---> 6096 miles
+       --- There is also a higher chance of packet loss with longer distance between client / server
+           longer distance = longer propagation time = more packets queued up on the buffer = greater chance of cogestion 
+       --- There is also a higher chance of packet loss with larger packet size
+           larger packet size = longer transmission/propagation time = more packets queued up on the buffer = greater chance of cogestion 
+
+#step 3 --- Calculate RTT for DNS look up for web with 6 objects and n parallel conenction in TCP
+   --- Test Result 1
+       $ ./test 4
+	One object: 143 msec
+	Non-Persistent 6 objects: 707 msec
+	Numsession: 2
+	4 parallel connection - Persistent: 237 msec
+	4 parallel connection - Non-Persistent: 331 msec
+   ---  Test Result 2
+	$ ./test 10
+	One object: 143 msec
+	Non-Persistent 6 objects: 707 msec
+	Numsession: 1
+	10 parallel connection - Persistent: 237 msec
+	0 parallel connection - Non-Persistent: 237 msec
+#step 4 ---
+   ---  telnet gaia.cs.umass.edu 80
+	Trying 128.119.245.12...
+	Connected to gaia.cs.umass.edu.
+	Escape character is '^]'.
+	Connection closed by foreign host.
+
+   ---  [yqin2@linux10608 Lab]$ GET /kurose_ross/interactive/index.php HTTP/1.1
+	<html><body><h1>403 Forbidden</h1>
+	Request forbidden by administrative rules.
+	</body></html>
+
+   ---  What is the name of the file that is being retrieved in this GET message? 
+        --- /kurose_ross/interactive/index.php
+   ---  What version of HTTP is the client running?
+        --- HTTP/1/1
+   ---  What formats of text and images, if any?
+	--- HTML?
+
+#step 5 --- using telnet on 3 server hosts in step 2
+   --- [yqin2@linux10608 Lab]$ telnet baidu.com 80
+	Trying 220.181.38.148...
+	Connected to baidu.com.
+	Escape character is '^]'.
+	Connection closed by foreign host.
+	[yqin2@linux10608 Lab]$ telnet google.com 80
+	Trying 142.250.191.78...
+	Connected to google.com.
+	Escape character is '^]'.
+	Connection closed by foreign host.
+	[yqin2@linux10608 Lab]$ telnet nokia.com 80
+	Trying 162.13.40.196...
+	Connected to nokia.com.
+	Escape character is '^]'.
+	Connection closed by foreign host.
+   --- [yqin2@linux10608 Lab]$ telnet baidu.com 3389
+	Trying 220.181.38.251...
+	telnet: connect to address 220.181.38.251: Connection timed out
+	Trying 220.181.38.148...
+	telnet: connect to address 220.181.38.148: Connection timed out
+	[yqin2@linux10608 Lab]$ telnet google.com 3389
+	Trying 142.250.191.78...
+	telnet: connect to address 142.250.191.78: Connection timed out
+	Trying 2607:f8b0:4005:810::200e...
+	[yqin2@linux10608 Lab]$ telnet nokia.com 3389
+	Trying 162.13.40.196...
+	telnet: connect to address 162.13.40.196: Connection timed out
+
+
+        
